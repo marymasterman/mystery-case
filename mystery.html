@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mystery Case - Medical Diagnosis Competition</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="root"></div>
+  
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+    
+    const Heart = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+      </svg>
+    );
+    
+    const Users = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+    );
+    
+    const CheckCircle = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+        <polyline points="22 4 12 14.01 9 11.01"></polyline>
+      </svg>
+    );
+    
+    const XCircle = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="15" y1="9" x2="9" y2="15"></line>
+        <line x1="9" y1="9" x2="15" y2="15"></line>
+      </svg>
+    );
+    
+    const Eye = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+        <circle cx="12" cy="12" r="3"></circle>
+      </svg>
+    );
+    
+    const Lock = ({ size = 24, className = "" }) => (
+      <svg width={size} height={size} className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+        <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+      </svg>
+    );
+
+    const CASE = {
+      presentation: "A 45-year-old male presents with 3 days of fever (102°F), productive cough with rust-colored sputum, right-sided chest pain that worsens with deep breathing, and shortness of breath. He appears ill and is breathing rapidly.",
+      correctDiagnosis: "Community-Acquired Pneumonia",
+      alternativeAnswers: ["pneumonia", "bacterial pneumonia", "lobar pneumonia", "cap"]
+    };
+
+    const TESTS = {
+      labs: [
+        { name: "CBC with Differential", cost: 25, result: "WBC 16,500 with left shift (85% neutrophils)" },
+        { name: "CMP", cost: 30, result: "Normal electrolytes, Cr 1.0, glucose 110" },
+        { name: "Blood Cultures", cost: 150, result: "Pending (would grow Streptococcus pneumoniae)" },
+        { name: "Sputum Culture", cost: 80, result: "Gram-positive diplococci, culture pending" },
+        { name: "Procalcitonin", cost: 45, result: "Elevated at 2.8 ng/mL (suggests bacterial infection)" },
+        { name: "Arterial Blood Gas", cost: 75, result: "pH 7.42, PaO2 75 mmHg, PaCO2 38 mmHg" },
+        { name: "Liver Function Tests", cost: 35, result: "Normal AST, ALT, bilirubin, albumin" },
+        { name: "Urinalysis", cost: 20, result: "Normal, no signs of infection" }
+      ],
+      radiology: [
+        { name: "Chest X-Ray (2 views)", cost: 100, result: "Right lower lobe consolidation with air bronchograms" },
+        { name: "CT Chest without contrast", cost: 400, result: "Confirms RLL consolidation, no effusion or abscess" },
+        { name: "CT Chest with contrast", cost: 600, result: "RLL consolidation, no PE, no complications" },
+        { name: "Ultrasound Chest", cost: 150, result: "Small pleural effusion, consolidated lung" },
+        { name: "Abdominal X-Ray", cost: 80, result: "Normal bowel gas pattern" }
+      ]
+    };
+
+    const STORAGE_KEY = 'mystery-case-data';
+
+    const storage = {
+      get: (key) => {
+        try {
+          const value = localStorage.getItem(key);
+          return value ? JSON.parse(value) : null;
+        } catch (error) {
+          return null;
+        }
+      },
+      set: (key, value) => {
+        try {
+          localStorage.setItem(key, JSON.stringify(value));
+          return true;
+        } catch (error) {
+          return false;
+        }
+      }
+    };
+
+    function MysteryCase() {
+      const [view, setView] = useState('select');
+      const [teams, setTeams] = useState([
+        { id: 1, name: "Team 1", orderedTests: [], totalCost: 0, diagnosis: "", submitted: false, correct: null },
+        { id: 2, name: "Team 2", orderedTests: [], totalCost: 0, diagnosis: "", submitted: false, correct: null },
+        { id: 3, name: "Team 3", orderedTests: [], totalCost: 0, diagnosis: "", submitted: false, correct: null }
+      ]);
+      const [showResults, setShowResults] = useState(false);
+
+      useEffect(() => {
+        const loadData = () => {
+          const data = storage.get(STORAGE_KEY);
+          if (data && data.teams) {
+            setTeams(data.teams);
+            setShowResults(data.showResults || false);
+          }
+        };
+        
+        loadData();
+        const interval = setInterval(loadData, 2000);
+        return () => clearInterval(interval);
+      }, []);
+
+      useEffect(() => {
+        if (view !== 'select') {
+          storage.set(STORAGE_KEY, { teams, showResults });
+        }
+      }, [teams, showResults, view]);
+
+      const orderTest = (teamId, category, test) => {
+        const team = teams.find(t => t.id === teamId);
+        if (team.submitted) return;
+        
+        const alreadyOrdered = team.orderedTests.some(t => t.name === test.name);
+        if (alreadyOrdered) return;
+
+        setTeams(teams.map(t => 
+          t.id === teamId 
+            ? {
+                ...t,
+                orderedTests: [...t.orderedTests, { ...test, category }],
+                totalCost: t.totalCost + test.cost
+              }
+            : t
+        ));
+      };
+
+      const updateDiagnosis = (teamId, value) => {
+        setTeams(teams.map(t => 
+          t.id === teamId ? { ...t, diagnosis: value } : t
+        ));
+      };
+
+      const submitDiagnosis = (teamId) => {
+        const team = teams.find(t => t.id === teamId);
+        if (!team.diagnosis.trim()) return;
+        
+        const isCorrect = 
+          team.diagnosis.toLowerCase() === CASE.correctDiagnosis.toLowerCase() ||
+          CASE.alternativeAnswers.some(alt => 
+            team.diagnosis.toLowerCase().includes(alt)
+          );
+
+        setTeams(teams.map(t => 
+          t.id === teamId 
+            ? { ...t, submitted: true, correct: isCorrect }
+            : t
+        ));
+      };
+
+      const revealResults = () => {
+        setShowResults(true);
+      };
+
+      const resetGame = () => {
+        const newTeams = [
+          { id: 1, name: "Team 1", orderedTests: [], totalCost: 0, diagnosis: "", submitted: false, correct: null },
+          { id: 2, name: "Team 2", orderedTests: [], totalCost: 0, diagnosis: "", submitted: false, correct: null },
+          { id: 3, name: "Team 3", orderedTests: [], totalCost: 0, diagnosis: "", submitted: false, correct: null }
+        ];
+        setTeams(newTeams);
+        setShowResults(false);
+        storage.set(STORAGE_KEY, { teams: newTeams, showResults: false });
+      };
+
+      const getWinner = () => {
+        const correctTeams = teams.filter(t => t.correct);
+        if (correctTeams.length === 0) return null;
+        return correctTeams.reduce((min, t) => 
+          t.totalCost < min.totalCost ? t : min
+        );
+      };
+
+      const allSubmitted = teams.every(t => t.submitted);
+      const winner = getWinner();
+
+      if (view === 'select') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-6 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-2xl p-8 max-w-2xl w-full">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <Heart size={48} className="text-red-500" />
+                <h1 className="text-4xl font-bold text-gray-800">Mystery Case</h1>
+              </div>
+              
+              <p className="text-center text-gray-600 mb-8">Select your role to begin</p>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <button onClick={() => setView('facilitator')} className="bg-purple-600 hover:bg-purple-700 text-white p-6 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg">
+                  <div className="flex justify-center mb-2"><Eye size={32} /></div>
+                  Facilitator View
+                  <div className="text-sm mt-2 opacity-90">See all teams</div>
+                </button>
+                
+                <button onClick={() => setView('team1')} className="bg-blue-600 hover:bg-blue-700 text-white p-6 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg">
+                  <div className="flex justify-center mb-2"><Lock size={32} /></div>
+                  Team 1
+                  <div className="text-sm mt-2 opacity-90">Private workspace</div>
+                </button>
+                
+                <button onClick={() => setView('team2')} className="bg-green-600 hover:bg-green-700 text-white p-6 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg">
+                  <div className="flex justify-center mb-2"><Lock size={32} /></div>
+                  Team 2
+                  <div className="text-sm mt-2 opacity-90">Private workspace</div>
+                </button>
+                
+                <button onClick={() => setView('team3')} className="bg-orange-600 hover:bg-orange-700 text-white p-6 rounded-lg font-semibold text-lg transition-all transform hover:scale-105 shadow-lg">
+                  <div className="flex justify-center mb-2"><Lock size={32} /></div>
+                  Team 3
+                  <div className="text-sm mt-2 opacity-90">Private workspace</div>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      if (view === 'facilitator') {
+        return (
+          <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 p-6">
+            <div className="max-w-7xl mx-auto">
+              <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <Eye size={32} className="text-purple-500" />
+                    <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Facilitator Dashboard</h1>
+                  </div>
+                  <button onClick={() => setView('select')} className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold">Back to Selection</button>
+                </div>
+                
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mt-4">
+                  <h2 className="font-semibold text-lg mb-2">Case Presentation</h2>
+                  <p className="text-gray-700">{CASE.presentation}</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+                {teams.map(team => (
+                  <div key={team.id} className="bg-white rounded-lg shadow-lg p-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-bold text-gray-800">{team.name}</h2>
+                      <div className="text-2xl font-bold text-indigo-600">${team.totalCost}</div>
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Tests Ordered ({team.orderedTests.length}):</div>
+                      {team.orderedTests.length === 0 ? (
+                        <p className="text-sm text-gray-400">None yet</p>
+                      ) : (
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {team.orderedTests.map((test, idx) => (
+                            <div key={idx} className="text-sm bg-gray-50 p-2 rounded">{test.name} - ${test.cost}</div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mb-4">
+                      <div className="text-sm font-semibold text-gray-600 mb-2">Diagnosis:</div>
+                      {team.diagnosis ? (
+                        <div className="bg-gray-50 p-2 rounded"><p className="text-sm">{team.diagnosis}</p></div>
+                      ) : (
+                        <p className="text-sm text-gray-400">Not submitted</p>
+                      )}
+                    </div>
+
+                    <div>
+                      {team.submitted ? (
+                        <div className={`p-3 rounded-lg ${team.correct ? 'bg-green-50 border border-green-300' : 'bg-red-50 border border-red-300'}`}>
+                          <div className="flex items-center gap-2 justify-center">
+                            {team.correct ? (
+                              <><CheckCircle size={20} className="text-green-600" /><span className="font-semibold text-green-800">Correct</span></>
+                            ) : (
+                              <><XCircle size={20} className="text-red-600" /><span className="font-semibold text-red-800">Incorrect</span></>
+                            )}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="bg-gray-100 p-3 rounded-lg text-center text-gray-600">Not submitted</div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {allSubmitted && (
+                <div className="bg-white rounded-lg shadow-lg p-6">
+                  {!showResults ? (
+                    <button onClick={revealResults} className="w-full bg-green-600 text-white py-4 rounded-lg font-bold text-lg hover:bg-green-700 transition-colors">Reveal Results & Winner</button>
+                  ) : (
+                    <div>
+                      <h2 className="text-2xl font-bold mb-6 text-center">Final Results</h2>
+                      
+                      <div className="mb-6 p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+                        <div className="text-center">
+                          <div className="font-semibold text-gray-700 mb-2">Correct Diagnosis:</div>
+                          <div className="text-xl font-bold text-blue-700">{CASE.correctDiagnosis}</div>
+                        </div>
+                      </div>
+
+                      {winner ? (
+                        <div className="text-center mb-6">
+                          <div className="text-3xl font-bold text-yellow-600 mb-2">🏆 Winner: {winner.name} 🏆</div>
+                          <div className="text-lg text-gray-600">Total Cost: ${winner.totalCost}</div>
+                        </div>
+                      ) : (
+                        <div className="text-center text-gray-600 font-semibold mb-6">No team got the correct diagnosis</div>
+                      )}
+
+                      <button onClick={resetGame} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition-colors">Reset Game</button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      const teamId = view === 'team1' ? 1 : view === 'team2' ? 2 : 3;
+      const currentTeam = teams.find(t => t.id === teamId);
+      const teamColors = { 1: { bg: 'from-blue-50 to-cyan-100' }, 2: { bg: 'from-green-50 to-emerald-100' }, 3: { bg: 'from-orange-50 to-amber-100' } };
+      const colors = teamColors[teamId];
+
+      return (
+        <div className={`min-h-screen bg-gradient-to-br ${colors.bg} p-6`}>
+          <div className="max-w-7xl mx-auto">
+            <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <Users size={32} />
+                  <h1 className="text-2xl md:text-3xl font-bold text-gray-800">{currentTeam.name} - Private Workspace</h1>
+                </div>
+                <button onClick={() => setView('select')} className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg font-semibold">Back to Selection</button>
+              </div>
+              
+              <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded mt-4">
+                <h2 className="font-semibold text-lg mb-2">Case Presentation</h2>
+                <p className="text-gray-700">{CASE.presentation}</p>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg shadow-lg p-4 mb-6">
+              <div className="flex items-center justify-center gap-4">
+                <span className="text-lg font-semibold text-gray-700">Your Total Cost:</span>
+                <span className="text-3xl font-bold text-indigo-600">${currentTeam.totalCost}</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-bold mb-4 text-gray-800">Available Tests</h2>
+                
+                <div className="mb-6">
+                  <h3 className="font-semibold text-lg mb-3 text-indigo-700">Laboratory Tests</h3>
+                  <div className="space-y-2">
+                    {TESTS.labs.map((test, idx) => {
+                      const ordered = currentTeam.orderedTests.some(t => t.name === test.name);
+                      return (
+                        <button key={idx} onClick={() => orderTest(teamId, 'lab', test)} disabled={currentTeam.submitted || ordered} className={`w-full text-left p-3 rounded-lg border-2 transition-all ${ordered ? 'bg-green-50 border-green-300' : currentTeam.submitted ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer'}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{test.name}</span>
+                            <span className="text-indigo-600 font-semibold">${test.cost}</span>
+                          </div>
+                          {ordered && <div className="text-sm text-green-600 mt-1">✓ Ordered</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-lg mb-3 text-indigo-700">Radiology</h3>
+                  <div className="space-y-2">
+                    {TESTS.radiology.map((test, idx) => {
+                      const ordered = currentTeam.orderedTests.some(t => t.name === test.name);
+                      return (
+                        <button key={idx} onClick={() => orderTest(teamId, 'radiology', test)} disabled={currentTeam.submitted || ordered} className={`w-full text-left p-3 rounded-lg border-2 transition-all ${ordered ? 'bg-green-50 border-green-300' : currentTeam.submitted ? 'bg-gray-100 border-gray-200 cursor-not-allowed' : 'bg-white border-gray-200 hover:border-indigo-400 hover:bg-indigo-50 cursor-pointer'}`}>
+                          <div className="flex justify-between items-center">
+                            <span className="font-medium">{test.name}</span>
+                            <span className="text-indigo-600 font-semibold">${test.cost}</span>
+                          </div>
+                          {ordered && <div className="text-sm text-green-600 mt-1">✓ Ordered</div>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white rounded-lg shadow-lg p-6">
+                <h2 className="text-xl font-bold mb-4 text-gray-800">Test Results</h2>
+                
+                {currentTeam.orderedTests.length === 0 ? (
+                  <p className="text-gray-500 text-center py-8">No tests ordered yet. Click on tests to order them.</p>
+                ) : (
+                  <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
+                    {currentTeam.orderedTests.map((test, idx) => (
+                      <div key={idx} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                        <div className="font-semibold text-indigo-700 mb-1">{test.name}</div>
+                        <div className="text-sm text-gray-600">{test.result}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                <div className="bg-indigo-50 p-4 rounded-lg mb-6">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-lg">Total Cost:</span>
+                    <span className="text-2xl font-bold text-indigo-600">${currentTeam.totalCost}</span>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="font-semibold text-lg mb-3">Submit Diagnosis</h3>
+                  <input type="text" value={currentTeam.diagnosis} onChange={(e) => updateDiagnosis(teamId, e.target.value)} disabled={currentTeam.submitted} placeholder="Enter your diagnosis..." className="w-full p-3 border-2 border-gray-300 rounded-lg mb-3 focus:border-indigo-500 focus:outline-none disabled:bg-gray-100" />
+                  <button onClick={() => submitDiagnosis(teamId)} disabled={currentTeam.submitted || !currentTeam.diagnosis.trim()} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold hover:bg-indigo-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed">
+                    {currentTeam.submitted ? 'Diagnosis Submitted ✓' : 'Submit Diagnosis'}
+                  </button>
+
+                  {currentTeam.submitted && !showResults && (
+                    <div className="mt-4 p-4 rounded-lg bg-blue-50 border border-blue-300 text-center">
+                      <span className="font-semibold text-blue-800">Your diagnosis has been submitted! Wait for the facilitator to reveal results.</span>
+                    </div>
+                  )}
+                </div>
+
+                {showResults && (
+                  <div className="mt-6">
+                    <div className="mb-4 p-4 bg-blue-50 rounded-lg border-2 border-blue-300">
+                      <div className="text-center">
+                        <div className="font-semibold text-gray-700 mb-2">Correct Diagnosis:</div>
+                        <div className="text-xl font-bold text-blue-700">{CASE.correctDiagnosis}</div>
+                      </div>
+                    </div>
+
+                    <div className={`p-4 rounded-lg ${currentTeam.correct ? 'bg-green-50 border border-green-300' : 'bg-red-50 border border-red-300'}`}>
+                      <div className="flex items-center justify-center gap-2">
+                        {currentTeam.correct ? (
+                          <><CheckCircle size={24} className="text-green-600" /><span className="font-semibold text-green-800">Your diagnosis was correct!</span></>
+                        ) : (
+                          <><XCircle size={24} className="text-red-600" /><span className="font-semibold text-red-800">Your diagnosis was incorrect</span></>
+                        )}
+                      </div>
+                    </div>
+
+                    {winner && winner.id === teamId && (
+                      <div className="mt-4 text-center text-2xl font-bold text-yellow-600">🏆 YOUR TEAM WON! 🏆</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    ReactDOM.render(<MysteryCase />, document.getElementById('root'));
+  </script>
+</body>
+</html>
