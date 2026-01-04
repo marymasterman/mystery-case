@@ -1,0 +1,2010 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mystery Case Builder - Complete</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .collapsible-section {
+            transition: max-height 0.3s ease-out;
+            overflow: hidden;
+        }
+        .collapsed {
+            max-height: 0;
+        }
+        .expanded {
+            max-height: 10000px;
+        }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <div class="max-w-7xl mx-auto p-6">
+        <div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 rounded-lg shadow-lg mb-6">
+            <h1 class="text-4xl font-bold mb-2">Mystery Case Builder</h1>
+            <p class="text-blue-100">Comprehensive medical case creator with ALL 366 tests</p>
+        </div>
+        
+        <!-- Case Information -->
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-2xl font-bold mb-4">📋 Case Information</h2>
+            
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Case ID</label>
+                    <input type="text" id="caseId" value="case_new" class="w-full border rounded px-3 py-2">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Case Title</label>
+                    <input type="text" id="caseTitle" value="" placeholder="e.g., 45M with Chest Pain" class="w-full border rounded px-3 py-2">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Chief Complaint / Presentation</label>
+                    <textarea id="chiefComplaint" rows="4" class="w-full border rounded px-3 py-2" placeholder="Patient presents with..."></textarea>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Correct Diagnosis</label>
+                    <input type="text" id="correctDx" value="" placeholder="Final diagnosis" class="w-full border rounded px-3 py-2">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium mb-1">Acceptable Alternative Diagnoses (one per line)</label>
+                    <textarea id="altDx" rows="2" placeholder="Alternative diagnosis 1&#10;Alternative diagnosis 2" class="w-full border rounded px-3 py-2"></textarea>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lab Panels with Individual Fields -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <button onclick="toggleMajorSection('coreLabPanels')" 
+                    class="w-full px-6 py-4 text-left rounded-t-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">🩸 Core Lab Panels (Individual Values)</h2>
+                    <p class="text-sm text-blue-100">CBC, Differential, BMP, LFT - with editable fields</p>
+                </div>
+                <span id="coreLabPanels_icon" class="text-white text-2xl">▼</span>
+            </button>
+            <div id="coreLabPanels" class="collapsible-section expanded p-6">
+                <p class="text-sm text-gray-600 mb-4">Most commonly ordered panels with editable fields. Check "Abn" to mark values as abnormal (will appear in red).</p>
+                <div id="detailedLabPanels" class="space-y-6"></div>
+            </div>
+        </div>
+
+        <!-- All Other Labs -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <button onclick="toggleMajorSection('allLabSection')" 
+                    class="w-full px-6 py-4 text-left rounded-t-lg bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">🧪 All Laboratory Tests (275 total)</h2>
+                    <p class="text-sm text-green-100">All lab categories from your spreadsheet. Click categories to expand.</p>
+                </div>
+                <span id="allLabSection_icon" class="text-white text-2xl">▼</span>
+            </button>
+            <div id="allLabSection" class="collapsible-section expanded p-6">
+                <div id="allLabTests"></div>
+            </div>
+        </div>
+
+        <!-- Imaging & Diagnostics -->
+        <div class="bg-white rounded-lg shadow mb-6">
+            <button onclick="toggleMajorSection('allImagingSection')" 
+                    class="w-full px-6 py-4 text-left rounded-t-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-bold text-white mb-1">🔬 Imaging & Diagnostics (91 total)</h2>
+                    <p class="text-sm text-purple-100">Upload images or provide text descriptions. Click categories to expand less common tests.</p>
+                </div>
+                <span id="allImagingSection_icon" class="text-white text-2xl">▼</span>
+            </button>
+            <div id="allImagingSection" class="collapsible-section expanded p-6">
+                <div id="allImagingTests"></div>
+            </div>
+        </div>
+
+        <!-- Generate Button -->
+        <div class="bg-white rounded-lg shadow p-6 sticky bottom-4">
+            <button onclick="generateCase()" class="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-4 rounded-lg text-lg shadow-lg">
+                Generate Case JSON
+            </button>
+            
+            <div id="output" class="mt-4 hidden">
+                <label class="block text-sm font-medium mb-2">Generated JSON:</label>
+                <textarea id="jsonOutput" rows="12" class="w-full border rounded px-3 py-2 font-mono text-xs" readonly></textarea>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="downloadJSON()" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-semibold py-2 px-4 rounded">
+                        💾 Download JSON File
+                    </button>
+                    <button onclick="copyJSON()" class="flex-1 bg-gray-600 hover:bg-gray-700 text-white font-semibold py-2 px-4 rounded">
+                        📋 Copy to Clipboard
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // All test data embedded
+        const allLabsData = {
+  "Hematology - Other": [
+    {
+      "name": "Antithrombin III",
+      "cost": 50.0
+    },
+    {
+      "name": "B12",
+      "cost": 25.0
+    },
+    {
+      "name": "\u03b22-Microglobulin",
+      "cost": 50.0
+    },
+    {
+      "name": "CD4",
+      "cost": 25.0
+    },
+    {
+      "name": "CD8",
+      "cost": 25.0
+    },
+    {
+      "name": "Coomb's test",
+      "cost": 25.0
+    },
+    {
+      "name": "Factor V Leiden mutation",
+      "cost": 50.0
+    },
+    {
+      "name": "Ferritin",
+      "cost": 25.0
+    },
+    {
+      "name": "Folate",
+      "cost": 25.0
+    },
+    {
+      "name": "Free kappa light chain",
+      "cost": 50.0
+    },
+    {
+      "name": "Free lambda light chain",
+      "cost": 50.0
+    },
+    {
+      "name": "G6PD",
+      "cost": 50.0
+    },
+    {
+      "name": "Haptoglobin",
+      "cost": 50.0
+    },
+    {
+      "name": "Hemoglobin electropheresis",
+      "cost": 50.0
+    },
+    {
+      "name": "Homocysteine",
+      "cost": 50.0
+    },
+    {
+      "name": "Iron",
+      "cost": 25.0
+    },
+    {
+      "name": "Iron binding capacity",
+      "cost": 25.0
+    },
+    {
+      "name": "Methemoglobin",
+      "cost": 25.0
+    },
+    {
+      "name": "Methylmalonic Acid",
+      "cost": 50.0
+    },
+    {
+      "name": "Protein C",
+      "cost": 50.0
+    },
+    {
+      "name": "Protein S",
+      "cost": 50.0
+    },
+    {
+      "name": "Reticulocyte Count",
+      "cost": 25.0
+    },
+    {
+      "name": "Smear",
+      "cost": 50.0
+    },
+    {
+      "name": "SPEP",
+      "cost": 100.0
+    },
+    {
+      "name": "Transferrin",
+      "cost": 50.0
+    }
+  ],
+  "Coagulation": [
+    {
+      "name": "Prothrombin Time",
+      "cost": 30.0
+    },
+    {
+      "name": "PTT",
+      "cost": 25.0
+    },
+    {
+      "name": "Anti Xa",
+      "cost": 50.0
+    },
+    {
+      "name": "Bleeding Time",
+      "cost": 25.0
+    },
+    {
+      "name": "d-dimer",
+      "cost": 20.0
+    },
+    {
+      "name": "Fibrinogen",
+      "cost": 20.0
+    },
+    {
+      "name": "Fibrin split products",
+      "cost": 20.0
+    },
+    {
+      "name": "Plasminogen",
+      "cost": 20.0
+    },
+    {
+      "name": "TEG",
+      "cost": 100.0
+    }
+  ],
+  "CHEMISTRY": [
+    {
+      "name": "Gamma glutamyl transferase",
+      "cost": 25.0
+    }
+  ],
+  "Cardiac Profile": [
+    {
+      "name": "CK MB Fraction",
+      "cost": 15.0
+    },
+    {
+      "name": "Creatinine Kinase",
+      "cost": 15.0
+    },
+    {
+      "name": "CK-MB Index",
+      "cost": 15.0
+    },
+    {
+      "name": "BNP",
+      "cost": 20.0
+    },
+    {
+      "name": "Troponin I",
+      "cost": 25.0
+    },
+    {
+      "name": "Myoglobin",
+      "cost": 15.0
+    }
+  ],
+  "Other Chem/Endocrine/Immunology": [
+    {
+      "name": "1,25-Dihydroxyvitamin D",
+      "cost": 50.0
+    },
+    {
+      "name": "25-Hydroxyvitamin D",
+      "cost": 100.0
+    },
+    {
+      "name": "Acetaminophen",
+      "cost": 50.0
+    },
+    {
+      "name": "Acetone",
+      "cost": 25.0
+    },
+    {
+      "name": "Adrenocorticotropic Hormone (ACTH)",
+      "cost": 50.0
+    },
+    {
+      "name": "Aldolase",
+      "cost": 25.0
+    },
+    {
+      "name": "Aldosterone",
+      "cost": 50.0
+    },
+    {
+      "name": "Aldosterone/Renin Ratio",
+      "cost": 50.0
+    },
+    {
+      "name": "Alpha Fetoprotein (AFP)",
+      "cost": 25.0
+    },
+    {
+      "name": "Ammonia",
+      "cost": 25.0
+    },
+    {
+      "name": "Amylase",
+      "cost": 25.0
+    },
+    {
+      "name": "Angiotensin converting enzyme",
+      "cost": 25.0
+    },
+    {
+      "name": "Arginine Vasopressin (AVP)",
+      "cost": 50.0
+    },
+    {
+      "name": "Beta-Hydroxybutyrate",
+      "cost": 50.0
+    },
+    {
+      "name": "CA 19-9",
+      "cost": 50.0
+    },
+    {
+      "name": "CA-125",
+      "cost": 50.0
+    },
+    {
+      "name": "Calcium, ionized",
+      "cost": 25.0
+    },
+    {
+      "name": "Carbon monoxide",
+      "cost": 25.0
+    },
+    {
+      "name": "Calcitonin",
+      "cost": 50.0
+    },
+    {
+      "name": "Carcinoembryonic Antigen (CEA)",
+      "cost": 50.0
+    },
+    {
+      "name": "Ceruloplasmin",
+      "cost": 50.0
+    },
+    {
+      "name": "Copper",
+      "cost": 50.0
+    },
+    {
+      "name": "Cortisol, 8AM",
+      "cost": 50.0
+    },
+    {
+      "name": "Cortisol, Random",
+      "cost": 50.0
+    },
+    {
+      "name": "CRP",
+      "cost": 50.0
+    },
+    {
+      "name": "Drug Screen, Serum",
+      "cost": 100.0
+    },
+    {
+      "name": "Ethanol",
+      "cost": 25.0
+    },
+    {
+      "name": "ESR",
+      "cost": 25.0
+    },
+    {
+      "name": "FSH",
+      "cost": 50.0
+    },
+    {
+      "name": "Globulin",
+      "cost": 25.0
+    },
+    {
+      "name": "Growth Hormone (fasting)",
+      "cost": 50.0
+    },
+    {
+      "name": "Hemoglobin A1C",
+      "cost": 25.0
+    },
+    {
+      "name": "IgA",
+      "cost": 25.0
+    },
+    {
+      "name": "IgE",
+      "cost": 25.0
+    },
+    {
+      "name": "IgG",
+      "cost": 25.0
+    },
+    {
+      "name": "IgM",
+      "cost": 25.0
+    },
+    {
+      "name": "Insulin-like Growth Factor (IGF-1)",
+      "cost": 50.0
+    },
+    {
+      "name": "LH",
+      "cost": 50.0
+    },
+    {
+      "name": "Lactate",
+      "cost": 25.0
+    },
+    {
+      "name": "Lactate Dehydrogenase",
+      "cost": 25.0
+    },
+    {
+      "name": "Lead",
+      "cost": 25.0
+    },
+    {
+      "name": "Lipase",
+      "cost": 25.0
+    },
+    {
+      "name": "Magnesium",
+      "cost": 8.0
+    },
+    {
+      "name": "Methanol",
+      "cost": 25.0
+    },
+    {
+      "name": "Osmolarity",
+      "cost": 25.0
+    },
+    {
+      "name": "Parathyroid hormone",
+      "cost": 50.0
+    },
+    {
+      "name": "Phosphorus",
+      "cost": 8.0
+    },
+    {
+      "name": "Pregnancy, Serum",
+      "cost": 25.0
+    },
+    {
+      "name": "Procalcitonin",
+      "cost": 50.0
+    },
+    {
+      "name": "Prolactin (Female)",
+      "cost": 50.0
+    },
+    {
+      "name": "Prolactin (Male)",
+      "cost": 50.0
+    },
+    {
+      "name": "Prostate Specific Antigen (PSA)",
+      "cost": 25.0
+    },
+    {
+      "name": "Renin",
+      "cost": 50.0
+    },
+    {
+      "name": "Testosterone (male)",
+      "cost": 50.0
+    },
+    {
+      "name": "Testosterone (female)",
+      "cost": 50.0
+    },
+    {
+      "name": "Triiodothyronine, Total (T3)",
+      "cost": 50.0
+    },
+    {
+      "name": "Triiodothyronine, Free (FT3)",
+      "cost": 50.0
+    },
+    {
+      "name": "Thyroglobulin",
+      "cost": 50.0
+    },
+    {
+      "name": "Thyrotropin Releasing Hormone",
+      "cost": 50.0
+    },
+    {
+      "name": "Thyroxine, total (T4)",
+      "cost": 50.0
+    },
+    {
+      "name": "Thyroxine, free (FT4)",
+      "cost": 50.0
+    },
+    {
+      "name": "Thyroxine Binding Globulin",
+      "cost": 50.0
+    },
+    {
+      "name": "TSH",
+      "cost": 25.0
+    },
+    {
+      "name": "Uric acid",
+      "cost": 25.0
+    }
+  ],
+  "Urine Micro": [
+    {
+      "name": "WBC, UA",
+      "cost": 25.0
+    },
+    {
+      "name": "RBC, UA",
+      "cost": 25.0
+    },
+    {
+      "name": "Squam Epithel, UA",
+      "cost": 25.0
+    },
+    {
+      "name": "Bacteria",
+      "cost": 25.0
+    },
+    {
+      "name": "RBC Casts, UA",
+      "cost": 25.0
+    },
+    {
+      "name": "Granular Casts, UA",
+      "cost": 25.0
+    },
+    {
+      "name": "Hyaline Casts, UA",
+      "cost": 25.0
+    },
+    {
+      "name": "Budding Yeast",
+      "cost": 25.0
+    },
+    {
+      "name": "Mucous",
+      "cost": 25.0
+    }
+  ],
+  "Urine Chemistry/Other": [
+    {
+      "name": "Urine Chloride",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Creatinine",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Osmolarity",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Potassium",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Protein",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Sodium",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Urea",
+      "cost": 25.0
+    },
+    {
+      "name": "Bence Jones protein",
+      "cost": 25.0
+    },
+    {
+      "name": "Free kappa light chain",
+      "cost": 25.0
+    },
+    {
+      "name": "Free lamda light chain",
+      "cost": 25.0
+    },
+    {
+      "name": "Urine Pregnancy/B-HCG",
+      "cost": 20.0
+    },
+    {
+      "name": "Urine Drug Screen",
+      "cost": 50.0
+    }
+  ],
+  "24 HOUR URINE VALUES": [
+    {
+      "name": "Amylase",
+      "cost": 10.0
+    },
+    {
+      "name": "Calcium",
+      "cost": 10.0
+    },
+    {
+      "name": "Chloride",
+      "cost": 10.0
+    },
+    {
+      "name": "Cortisol",
+      "cost": 10.0
+    },
+    {
+      "name": "Creatinine",
+      "cost": 10.0
+    },
+    {
+      "name": "Magnesium",
+      "cost": 10.0
+    },
+    {
+      "name": "Osmolality",
+      "cost": 10.0
+    },
+    {
+      "name": "Phosphorus",
+      "cost": 10.0
+    },
+    {
+      "name": "Potassium",
+      "cost": 10.0
+    },
+    {
+      "name": "Protein",
+      "cost": 10.0
+    },
+    {
+      "name": "Sodium",
+      "cost": 10.0
+    },
+    {
+      "name": "Urea nitrogen",
+      "cost": 10.0
+    },
+    {
+      "name": "Uric acid",
+      "cost": 10.0
+    }
+  ],
+  "Body Fluid Analysis": [
+    {
+      "name": "Protein",
+      "cost": 30.0
+    },
+    {
+      "name": "Albumin",
+      "cost": 30.0
+    },
+    {
+      "name": "LDH",
+      "cost": 30.0
+    },
+    {
+      "name": "Glucose",
+      "cost": 30.0
+    },
+    {
+      "name": "Adenosine Deaminase",
+      "cost": 100.0
+    },
+    {
+      "name": "Triglycerides",
+      "cost": 50.0
+    },
+    {
+      "name": "Gram Stain/Culture",
+      "cost": 100.0
+    },
+    {
+      "name": "Cell Count/Dif",
+      "cost": 100.0
+    },
+    {
+      "name": "Cytology",
+      "cost": 150.0
+    }
+  ],
+  "Stool": [
+    {
+      "name": "Culture",
+      "cost": 200.0
+    },
+    {
+      "name": "O & P",
+      "cost": 200.0
+    },
+    {
+      "name": "Fat",
+      "cost": 150.0
+    },
+    {
+      "name": "Leukocytes",
+      "cost": 50.0
+    },
+    {
+      "name": "Occult Blood",
+      "cost": 20.0
+    },
+    {
+      "name": "Sodium",
+      "cost": 25.0
+    },
+    {
+      "name": "Potassium",
+      "cost": 25.0
+    },
+    {
+      "name": "C. diff",
+      "cost": 200.0
+    },
+    {
+      "name": "Cryptosporidium smear",
+      "cost": 200.0
+    },
+    {
+      "name": "H. pylori antigen",
+      "cost": 200.0
+    },
+    {
+      "name": "Microsporidia, Cyclospora, Isospora smear",
+      "cost": 200.0
+    },
+    {
+      "name": "Rotavirus antigen",
+      "cost": 200.0
+    },
+    {
+      "name": "Shiga ELISA",
+      "cost": 1000.0
+    }
+  ],
+  "Microbiology": [
+    {
+      "name": "Blood Culture",
+      "cost": 200.0
+    },
+    {
+      "name": "Blood Culture - Fungal",
+      "cost": 300.0
+    },
+    {
+      "name": "Blood Culture - AFB",
+      "cost": 200.0
+    },
+    {
+      "name": "Body Fluid Culture",
+      "cost": 300.0
+    },
+    {
+      "name": "Bone Marrow Culture",
+      "cost": 500.0
+    },
+    {
+      "name": "GU Culture - Group B Strep",
+      "cost": 200.0
+    },
+    {
+      "name": "Urine Culture",
+      "cost": 200.0
+    },
+    {
+      "name": "Sputum Culture",
+      "cost": 200.0
+    },
+    {
+      "name": "Sputum Culture - AFB",
+      "cost": 200.0
+    },
+    {
+      "name": "Sputum - Silver Stain",
+      "cost": 200.0
+    }
+  ],
+  "Serology": [
+    {
+      "name": "1,3-\u03b2-d-glucan",
+      "cost": 50.0
+    },
+    {
+      "name": "Acetylcholine Receptor Antibody",
+      "cost": 50.0
+    },
+    {
+      "name": "ANA",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-\u03b22-Glycoprotein 1 Ab",
+      "cost": 250.0
+    },
+    {
+      "name": "Anti-cardiolipin IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-cardiolipin IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-CCP",
+      "cost": 50.0
+    },
+    {
+      "name": "Anticentromere Ab",
+      "cost": 150.0
+    },
+    {
+      "name": "Anti-double stranded DNA Ab",
+      "cost": 200.0
+    },
+    {
+      "name": "Antiendomysial IgA",
+      "cost": 100.0
+    },
+    {
+      "name": "Antimitochondrial Ab",
+      "cost": 100.0
+    },
+    {
+      "name": "Antihistone Ab",
+      "cost": 200.0
+    },
+    {
+      "name": "Anti LKM-1",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-RNA polymerase III Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "c-ANCA",
+      "cost": 50.0
+    },
+    {
+      "name": "p-ANCA",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-Jo",
+      "cost": 150.0
+    },
+    {
+      "name": "Anti-La",
+      "cost": 150.0
+    },
+    {
+      "name": "Anti-Ro",
+      "cost": 150.0
+    },
+    {
+      "name": "Anti-Scl-70",
+      "cost": 200.0
+    },
+    {
+      "name": "Anti-Smooth Muscle Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-Streptolysin O",
+      "cost": 50.0
+    },
+    {
+      "name": "Anti-Tissue Transglutaminase",
+      "cost": 100.0
+    },
+    {
+      "name": "Anti-U1-RNP Ab",
+      "cost": 150.0
+    },
+    {
+      "name": "C3 Complement",
+      "cost": 100.0
+    },
+    {
+      "name": "C4 Complement",
+      "cost": 100.0
+    },
+    {
+      "name": "CH50",
+      "cost": 150.0
+    },
+    {
+      "name": "CMV IgG Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "CMV IgM Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "CMV viral load",
+      "cost": 50.0
+    },
+    {
+      "name": "Cryptococcal Antigen",
+      "cost": 50.0
+    },
+    {
+      "name": "EBV Nuclear Antigen (EBNA)",
+      "cost": 50.0
+    },
+    {
+      "name": "EBV Viral Capsid IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "EBV Viral Capsid IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "EBV Early antigen",
+      "cost": 50.0
+    },
+    {
+      "name": "Flu A/B",
+      "cost": 50.0
+    },
+    {
+      "name": "Galactomannan index",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis A IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis A IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis B sAg",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis B sAb",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis B cAb",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis B E antigen",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis B E Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis B Quantitative DNA",
+      "cost": 100.0
+    },
+    {
+      "name": "Hepatitis C Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis C RNA",
+      "cost": 100.0
+    },
+    {
+      "name": "Hepatitis D IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "Hepatitis E IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "Histoplasma Ag - Urine",
+      "cost": 200.0
+    },
+    {
+      "name": "HIV - EIA",
+      "cost": 100.0
+    },
+    {
+      "name": "HIV - Rapid",
+      "cost": 50.0
+    },
+    {
+      "name": "HIV - Viral Load",
+      "cost": 100.0
+    },
+    {
+      "name": "HIV - Western Blot",
+      "cost": 100.0
+    },
+    {
+      "name": "HSV IgG EIU",
+      "cost": 50.0
+    },
+    {
+      "name": "HSV 1 IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "HSV 2 IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "HSV Culture",
+      "cost": 100.0
+    },
+    {
+      "name": "IgG4",
+      "cost": 100.0
+    },
+    {
+      "name": "Lupus Anticoagulant",
+      "cost": 50.0
+    },
+    {
+      "name": "Monospot",
+      "cost": 100.0
+    },
+    {
+      "name": "Quantiferon gold",
+      "cost": 100.0
+    },
+    {
+      "name": "Parvovirus IgG",
+      "cost": 100.0
+    },
+    {
+      "name": "Parvovirus IgM",
+      "cost": 100.0
+    },
+    {
+      "name": "PPD",
+      "cost": 100.0
+    },
+    {
+      "name": "Rheumatoid Factor",
+      "cost": 50.0
+    },
+    {
+      "name": "Rickettsia rickettsii IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "Rickettsia rickettsii IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "RPR",
+      "cost": 25.0
+    },
+    {
+      "name": "Sjogren's anti-SSA Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "Sjogren's anti-SSB Ab",
+      "cost": 50.0
+    },
+    {
+      "name": "Strongyloides antibody",
+      "cost": 50.0
+    },
+    {
+      "name": "Toxoplasma IgG",
+      "cost": 50.0
+    },
+    {
+      "name": "Toxoplasma IgM",
+      "cost": 50.0
+    },
+    {
+      "name": "Treponema pallidum IgG",
+      "cost": 50.0
+    }
+  ],
+  "BLOOD BANK": [
+    {
+      "name": "ABO Rh",
+      "cost": 25.0
+    },
+    {
+      "name": "Antibody Screen",
+      "cost": 25.0
+    }
+  ],
+  "Body Fluids (CSF)": [
+    {
+      "name": "Cell Count",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Gram Stain",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Culture",
+      "cost": 50.0
+    },
+    {
+      "name": "CSF Cytology",
+      "cost": 200.0
+    },
+    {
+      "name": "CSF 14-3-3 Protein",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF AFB Stain",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF AFB Culture",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Borrelia burgdorferi DNA PCR",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF CMV DNA by PCR",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Coccidioides Total Ab",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Cryptococcal Ag",
+      "cost": 200.0
+    },
+    {
+      "name": "CSF EBV DNA",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Enterovirus RNA",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Glucose",
+      "cost": 20.0
+    },
+    {
+      "name": "CSF Fungal Panel",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF HSV 1 and 2 by PCR",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF India Ink",
+      "cost": 50.0
+    },
+    {
+      "name": "CSF JC Virus DNA",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Listeria Ab",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Myelin Basic Protein",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Oligoclonal Banding",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Protein",
+      "cost": 30.0
+    },
+    {
+      "name": "CSF Toxoplasmosis Ab",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Treponema Pallidum Ab",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF Varicella-zoster PCR",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF VDRL",
+      "cost": 100.0
+    },
+    {
+      "name": "CSF West Nile virus IgM",
+      "cost": 100.0
+    }
+  ]
+};
+        const allImagingData = {
+  "X-ray": [
+    {
+      "name": "Chest",
+      "cost": 50.0
+    },
+    {
+      "name": "Extremities",
+      "cost": 50.0
+    },
+    {
+      "name": "Abdomen/KUB",
+      "cost": 50.0
+    }
+  ],
+  "CT": [
+    {
+      "name": "Brain without",
+      "cost": 800.0
+    },
+    {
+      "name": "Brain with/without",
+      "cost": 800.0
+    },
+    {
+      "name": "Neck without",
+      "cost": 800.0
+    },
+    {
+      "name": "Neck with/without",
+      "cost": 800.0
+    },
+    {
+      "name": "Chest without",
+      "cost": 800.0
+    },
+    {
+      "name": "Chest with/without",
+      "cost": 800.0
+    },
+    {
+      "name": "Chest PE protocol",
+      "cost": 800.0
+    },
+    {
+      "name": "Abdomen without",
+      "cost": 800.0
+    },
+    {
+      "name": "Abdomen with IV contrast",
+      "cost": 800.0
+    },
+    {
+      "name": "Abdomen with PO contrast",
+      "cost": 800.0
+    },
+    {
+      "name": "Abdomen with IV & PO contrast",
+      "cost": 800.0
+    },
+    {
+      "name": "Pelvis without",
+      "cost": 800.0
+    },
+    {
+      "name": "Pelvis with/without",
+      "cost": 800.0
+    },
+    {
+      "name": "Extremity without",
+      "cost": 800.0
+    },
+    {
+      "name": "Extremity with/without",
+      "cost": 800.0
+    }
+  ],
+  "MRI": [
+    {
+      "name": "Brain without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Brain with/without",
+      "cost": 2500.0
+    },
+    {
+      "name": "MRA brain",
+      "cost": 2500.0
+    },
+    {
+      "name": "MRV brain",
+      "cost": 2500.0
+    },
+    {
+      "name": "Neck without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Neck with/without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Chest without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Chest with/without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Chest PE protocol",
+      "cost": 2500.0
+    },
+    {
+      "name": "Abdomen without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Abdomen with IV contrast",
+      "cost": 2500.0
+    },
+    {
+      "name": "Abdomen with PO contrast",
+      "cost": 2500.0
+    },
+    {
+      "name": "Abdomen with IV & PO contrast",
+      "cost": 2500.0
+    },
+    {
+      "name": "Pelvis without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Pelvis with/without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Extremity without",
+      "cost": 2500.0
+    },
+    {
+      "name": "Extremity with/without",
+      "cost": 2500.0
+    },
+    {
+      "name": "MRCP",
+      "cost": 2500.0
+    }
+  ],
+  "Ultrasound": [
+    {
+      "name": "Abdomen",
+      "cost": 250.0
+    },
+    {
+      "name": "Carotid",
+      "cost": 250.0
+    },
+    {
+      "name": "Extremity, Upper",
+      "cost": 250.0
+    },
+    {
+      "name": "Extremity, Lower",
+      "cost": 250.0
+    },
+    {
+      "name": "Right Upper Quadrant",
+      "cost": 150.0
+    },
+    {
+      "name": "Renal/Retroperitoneum",
+      "cost": 150.0
+    },
+    {
+      "name": "Thyroid",
+      "cost": 250.0
+    },
+    {
+      "name": "Pelvic U/S",
+      "cost": 250.0
+    }
+  ],
+  "Cardiac": [
+    {
+      "name": "EKG",
+      "cost": 50.0
+    },
+    {
+      "name": "Transthoracic Echocardiogram",
+      "cost": 500.0
+    },
+    {
+      "name": "Transesophageal Echocardiogram",
+      "cost": 1200.0
+    },
+    {
+      "name": "Exercise Stress EKG",
+      "cost": 1000.0
+    },
+    {
+      "name": "Exercise Stress Echo",
+      "cost": 1200.0
+    },
+    {
+      "name": "Dobutamine Stress Echo",
+      "cost": 1500.0
+    },
+    {
+      "name": "Dobutamine Nuclear Stress",
+      "cost": 1500.0
+    },
+    {
+      "name": "Adenosine Stress Echo",
+      "cost": 1500.0
+    },
+    {
+      "name": "Adenosine Nuclear Stress",
+      "cost": 1500.0
+    },
+    {
+      "name": "Left Heart Catheterization",
+      "cost": 2000.0
+    },
+    {
+      "name": "Right Heart Catheterization",
+      "cost": 2000.0
+    },
+    {
+      "name": "MRI",
+      "cost": 3000.0
+    }
+  ],
+  "Gastrointestinal": [
+    {
+      "name": "Urea Breath Test",
+      "cost": 250.0
+    },
+    {
+      "name": "Hydrogen Breath Test",
+      "cost": 250.0
+    },
+    {
+      "name": "EGD",
+      "cost": 2000.0
+    },
+    {
+      "name": "Colonoscopy",
+      "cost": 2000.0
+    },
+    {
+      "name": "Paracentesis",
+      "cost": 300.0
+    },
+    {
+      "name": "ERCP",
+      "cost": 2200.0
+    },
+    {
+      "name": "Endoscopic Ultrasound",
+      "cost": 2500.0
+    }
+  ],
+  "Neuro": [
+    {
+      "name": "Somatosensory Evoked Potentials",
+      "cost": 400.0
+    },
+    {
+      "name": "Electromyogram/Nerve Conduction Studies",
+      "cost": 400.0
+    },
+    {
+      "name": "Transcranial Doppler",
+      "cost": 400.0
+    },
+    {
+      "name": "Cerebral Angiography",
+      "cost": 1500.0
+    },
+    {
+      "name": "Edrophonium Testing",
+      "cost": 400.0
+    },
+    {
+      "name": "Electroencephalogram (EEG)",
+      "cost": 400
+    },
+    {
+      "name": "Lumbar Puncture",
+      "cost": 500
+    }
+  ],
+  "Pulmonary": [
+    {
+      "name": "Bronchoscopy",
+      "cost": 1200.0
+    },
+    {
+      "name": "Thoracentesis",
+      "cost": 400.0
+    },
+    {
+      "name": "Endobronchial ultrasound",
+      "cost": 1500.0
+    },
+    {
+      "name": "Pulmonary Function Tests",
+      "cost": 250.0
+    },
+    {
+      "name": "Negative Inspiratory Force",
+      "cost": 20.0
+    },
+    {
+      "name": "V/Q Scan",
+      "cost": 1500.0
+    }
+  ],
+  "Biopsy": [
+    {
+      "name": "Cervical",
+      "cost": 250.0
+    },
+    {
+      "name": "GI/endoscopic",
+      "cost": 250.0
+    },
+    {
+      "name": "Kidney",
+      "cost": 250.0
+    },
+    {
+      "name": "Liver",
+      "cost": 250.0
+    },
+    {
+      "name": "Lung/bronchial/transbronchial",
+      "cost": 250.0
+    },
+    {
+      "name": "Lymph node (excisional)",
+      "cost": 250.0
+    },
+    {
+      "name": "Lymph node (FNA)",
+      "cost": 250.0
+    },
+    {
+      "name": "Pleural",
+      "cost": 250.0
+    },
+    {
+      "name": "Muscle",
+      "cost": 250.0
+    },
+    {
+      "name": "Skin",
+      "cost": 250.0
+    },
+    {
+      "name": "Tissue",
+      "cost": 250.0
+    },
+    {
+      "name": "Bone Marrow",
+      "cost": 250.0
+    },
+    {
+      "name": "Flow Cytometry",
+      "cost": 250.0
+    },
+    {
+      "name": "Thyroid (FNA)",
+      "cost": 400.0
+    }
+  ],
+  "Misc": [
+    {
+      "name": "Pap smear",
+      "cost": 50.0
+    }
+  ]
+};
+        
+        // Core detailed panels
+        const detailedPanels = {
+            'CBC': {
+                name: 'Complete Blood Count',
+                cost: 30,
+                components: [
+                    {name: 'WBC', default: '7.5', unit: '10^3/uL', ref: '4.5-11.0'},
+                    {name: 'RBC', default: '4.8', unit: '10^6/uL', ref: '4.5-5.9'},
+                    {name: 'Hgb', default: '14.5', unit: 'g/dL', ref: '13.5-17.5'},
+                    {name: 'Hct', default: '42', unit: '%', ref: '41-53'},
+                    {name: 'MCV', default: '90', unit: 'fL', ref: '80-100'},
+                    {name: 'MCH', default: '30', unit: 'pg', ref: '27-31'},
+                    {name: 'MCHC', default: '34', unit: 'g/dL', ref: '32-36'},
+                    {name: 'Platelets', default: '250', unit: '10^3/uL', ref: '150-400'}
+                ]
+            },
+            'Diff': {
+                name: 'Differential',
+                cost: 50,
+                components: [
+                    {name: 'Neutrophils', default: '60', unit: '%', ref: '40-70'},
+                    {name: 'Lymphocytes', default: '30', unit: '%', ref: '20-40'},
+                    {name: 'Monocytes', default: '6', unit: '%', ref: '2-8'},
+                    {name: 'Eosinophils', default: '3', unit: '%', ref: '1-4'},
+                    {name: 'Basophils', default: '1', unit: '%', ref: '0-2'}
+                ]
+            },
+            'BMP': {
+                name: 'Basic Metabolic Panel',
+                cost: 25,
+                components: [
+                    {name: 'Sodium', default: '140', unit: 'mEq/L', ref: '136-145'},
+                    {name: 'Potassium', default: '4.0', unit: 'mEq/L', ref: '3.5-5.0'},
+                    {name: 'Chloride', default: '102', unit: 'mEq/L', ref: '98-106'},
+                    {name: 'CO2', default: '24', unit: 'mEq/L', ref: '22-29'},
+                    {name: 'BUN', default: '15', unit: 'mg/dL', ref: '7-20'},
+                    {name: 'Creatinine', default: '1.0', unit: 'mg/dL', ref: '0.7-1.3'},
+                    {name: 'Glucose', default: '95', unit: 'mg/dL', ref: '70-100'}
+                ]
+            },
+            'LFT': {
+                name: 'Hepatic Function Panel',
+                cost: 50,
+                components: [
+                    {name: 'AST', default: '30', unit: 'U/L', ref: '10-40'},
+                    {name: 'ALT', default: '35', unit: 'U/L', ref: '7-56'},
+                    {name: 'Alk Phos', default: '75', unit: 'U/L', ref: '44-147'},
+                    {name: 'Total Bili', default: '0.8', unit: 'mg/dL', ref: '0.1-1.2'},
+                    {name: 'Albumin', default: '4.0', unit: 'g/dL', ref: '3.5-5.5'}
+                ]
+            }
+        };
+
+        // Store uploaded images
+        const uploadedImages = {};
+
+        // Initialize the page
+        function init() {
+            renderDetailedPanels();
+            renderAllLabTests();
+            renderAllImagingTests();
+        }
+
+        function renderDetailedPanels() {
+            const container = document.getElementById('detailedLabPanels');
+            
+            Object.entries(detailedPanels).forEach(([id, panel]) => {
+                let html = `
+                    <div class="border-2 border-indigo-200 rounded-lg p-4 bg-indigo-50">
+                        <h3 class="font-bold text-lg mb-3 text-indigo-900">${panel.name} ($$${panel.cost})</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                `;
+                
+                panel.components.forEach(comp => {
+                    html += `
+                        <div class="bg-white p-2 rounded">
+                            <label class="text-xs font-medium text-gray-700">${comp.name}:</label>
+                            <div class="flex gap-1 items-center mt-1">
+                                <input type="text" 
+                                       id="${id}_${comp.name}" 
+                                       value="${comp.default}" 
+                                       class="flex-1 border rounded px-2 py-1 text-sm"
+                                       placeholder="${comp.default}">
+                                <span class="text-xs text-gray-500 w-16">${comp.unit}</span>
+                                <label class="flex items-center gap-1">
+                                    <input type="checkbox" id="${id}_${comp.name}_abn" class="rounded">
+                                    <span class="text-xs text-red-600 font-semibold">Abn</span>
+                                </label>
+                            </div>
+                            <div class="text-xs text-gray-400 mt-0.5">Ref: ${comp.ref} ${comp.unit}</div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function renderAllLabTests() {
+            const container = document.getElementById('allLabTests');
+            const alwaysShow = ['Body Fluids (CSF)'];  // CSF always visible
+            const categories = Object.keys(allLabsData).filter(k => allLabsData[k].length > 0);
+            
+            categories.forEach(category => {
+                const tests = allLabsData[category];
+                const isAlwaysVisible = alwaysShow.includes(category);
+                const categoryId = category.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                let html = `
+                    <div class="border rounded-lg mb-3">
+                        <button onclick="toggleSection('lab_${categoryId}')" 
+                                class="w-full px-4 py-3 text-left font-semibold bg-gray-100 hover:bg-gray-200 rounded-t-lg flex justify-between items-center">
+                            <span>${category} (${tests.length} tests)</span>
+                            <span id="lab_${categoryId}_icon" class="text-gray-500">${isAlwaysVisible ? '▼' : '▶'}</span>
+                        </button>
+                        <div id="lab_${categoryId}" class="collapsible-section ${isAlwaysVisible ? 'expanded' : 'collapsed'} p-4 space-y-2">
+                `;
+                
+                tests.forEach((test, idx) => {
+                    const testId = `lab_${categoryId}_${idx}`;
+                    html += `
+                        <div class="border-b pb-2">
+                            <label class="block text-sm font-medium mb-1">${test.name} ($$${test.cost})</label>
+                            <textarea id="${testId}" 
+                                      rows="1" 
+                                      class="w-full border rounded px-2 py-1 text-sm"
+                                      placeholder="Enter result (use ** for abnormal values)"></textarea>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function renderAllImagingTests() {
+            const container = document.getElementById('allImagingTests');
+            const alwaysShow = ['X-ray', 'CT', 'MRI', 'Ultrasound', 'Cardiac', 'Neuro'];
+            const categories = Object.keys(allImagingData).filter(k => allImagingData[k].length > 0);
+            
+            categories.forEach(category => {
+                const tests = allImagingData[category];
+                const isAlwaysVisible = alwaysShow.includes(category);
+                const categoryId = category.replace(/[^a-zA-Z0-9]/g, '_');
+                
+                let html = `
+                    <div class="border rounded-lg mb-3">
+                        <button onclick="toggleSection('img_${categoryId}')" 
+                                class="w-full px-4 py-3 text-left font-semibold bg-gray-100 hover:bg-gray-200 rounded-t-lg flex justify-between items-center">
+                            <span>${category} (${tests.length} tests)</span>
+                            <span id="img_${categoryId}_icon" class="text-gray-500">${isAlwaysVisible ? '▼' : '▶'}</span>
+                        </button>
+                        <div id="img_${categoryId}" class="collapsible-section ${isAlwaysVisible ? 'expanded' : 'collapsed'} p-4 space-y-4">
+                `;
+                
+                tests.forEach((test, idx) => {
+                    const testId = `img_${categoryId}_${idx}`;
+                    html += `
+                        <div class="border-2 border-gray-200 rounded p-3">
+                            <div class="font-medium mb-2">${test.name} ($$${test.cost})</div>
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="text-xs font-medium">Upload Image (JPG/PNG, max 5MB):</label>
+                                    <input type="file" accept="image/*" 
+                                           id="${testId}_file" 
+                                           onchange="handleImageUpload('${testId}')" 
+                                           class="w-full text-sm border rounded px-2 py-1">
+                                    <div id="${testId}_preview" class="mt-1"></div>
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium">OR Text Description:</label>
+                                    <input type="text" id="${testId}_desc" 
+                                           placeholder="[Image shows: ...]" 
+                                           value="[Image shows: normal study]"
+                                           class="w-full border rounded px-2 py-1 text-sm">
+                                </div>
+                                <div>
+                                    <label class="text-xs font-medium">Radiology Read ($100):</label>
+                                    <textarea id="${testId}_read" 
+                                              rows="2" 
+                                              class="w-full border rounded px-2 py-1 text-sm"
+                                              placeholder="**IMPRESSION:** ...">**IMPRESSION:** Normal study. No acute abnormality.</textarea>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
+                    </div>
+                `;
+                container.innerHTML += html;
+            });
+        }
+
+        function toggleSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById(sectionId + '_icon');
+            
+            if (section.classList.contains('collapsed')) {
+                section.classList.remove('collapsed');
+                section.classList.add('expanded');
+                icon.textContent = '▼';
+            } else {
+                section.classList.add('collapsed');
+                section.classList.remove('expanded');
+                icon.textContent = '▶';
+            }
+        }
+
+        function toggleMajorSection(sectionId) {
+            const section = document.getElementById(sectionId);
+            const icon = document.getElementById(sectionId + '_icon');
+            
+            if (section.classList.contains('collapsed')) {
+                section.classList.remove('collapsed');
+                section.classList.add('expanded');
+                icon.textContent = '▼';
+            } else {
+                section.classList.add('collapsed');
+                section.classList.remove('expanded');
+                icon.textContent = '▲';
+            }
+        }
+
+        function handleImageUpload(testId) {
+            const fileInput = document.getElementById(testId + '_file');
+            const file = fileInput.files[0];
+            
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    alert('Image too large! Please use images under 5MB.');
+                    fileInput.value = '';
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    uploadedImages[testId] = e.target.result;
+                    const preview = document.getElementById(testId + '_preview');
+                    preview.innerHTML = `
+                        <img src="${e.target.result}" class="max-w-xs border rounded mt-1" />
+                        <div class="text-xs text-green-600 mt-1">✓ Uploaded (${(file.size / 1024).toFixed(1)} KB)</div>
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function generateCase() {
+            const caseData = {
+                caseId: document.getElementById('caseId').value,
+                title: document.getElementById('caseTitle').value,
+                presentation: document.getElementById('chiefComplaint').value,
+                correctDiagnosis: document.getElementById('correctDx').value,
+                acceptableDiagnoses: document.getElementById('altDx').value.split('\n').filter(d => d.trim())
+            };
+
+            const labResults = {};
+            
+            // Collect detailed panels
+            Object.entries(detailedPanels).forEach(([id, panel]) => {
+                let result = '';
+                panel.components.forEach((comp, idx) => {
+                    const value = document.getElementById(`${id}_${comp.name}`).value;
+                    const isAbn = document.getElementById(`${id}_${comp.name}_abn`).checked;
+                    
+                    if (idx > 0) result += ', ';
+                    if (isAbn) {
+                        result += `**${comp.name} ${value}**`;
+                    } else {
+                        result += `${comp.name} ${value}`;
+                    }
+                });
+                labResults[id] = result;
+            });
+            
+            // Collect all other labs
+            Object.entries(allLabsData).forEach(([category, tests]) => {
+                const categoryId = category.replace(/[^a-zA-Z0-9]/g, '_');
+                tests.forEach((test, idx) => {
+                    const testId = `lab_${categoryId}_${idx}`;
+                    const elem = document.getElementById(testId);
+                    if (elem && elem.value.trim()) {
+                        labResults[testId] = elem.value;
+                    }
+                });
+            });
+
+            const imageResults = {};
+            const radiologyReads = {};
+            
+            // Collect imaging
+            Object.entries(allImagingData).forEach(([category, tests]) => {
+                const categoryId = category.replace(/[^a-zA-Z0-9]/g, '_');
+                tests.forEach((test, idx) => {
+                    const testId = `img_${categoryId}_${idx}`;
+                    
+                    // Image or description
+                    if (uploadedImages[testId]) {
+                        imageResults[testId] = uploadedImages[testId];
+                    } else {
+                        const desc = document.getElementById(testId + '_desc');
+                        if (desc && desc.value) {
+                            imageResults[testId] = desc.value;
+                        }
+                    }
+                    
+                    // Read
+                    const read = document.getElementById(testId + '_read');
+                    if (read && read.value) {
+                        radiologyReads[testId] = read.value;
+                    }
+                });
+            });
+
+            const fullCase = {
+                caseData,
+                testResults: labResults,
+                imageResults,
+                radiologyReads
+            };
+
+            const json = JSON.stringify(fullCase, null, 2);
+            document.getElementById('jsonOutput').value = json;
+            document.getElementById('output').classList.remove('hidden');
+            
+            const sizeMB = new Blob([json]).size / (1024 * 1024);
+            if (sizeMB > 10) {
+                alert(`Note: File size is ${sizeMB.toFixed(1)} MB. Consider using smaller/fewer images.`);
+            }
+        }
+
+        function downloadJSON() {
+            const json = document.getElementById('jsonOutput').value;
+            const caseId = document.getElementById('caseId').value || 'mystery_case';
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${caseId}.json`;
+            a.click();
+        }
+
+        function copyJSON() {
+            const textarea = document.getElementById('jsonOutput');
+            textarea.select();
+            document.execCommand('copy');
+            alert('JSON copied to clipboard!');
+        }
+
+        // Initialize on page load
+        window.onload = init;
+    </script>
+</body>
+</html>
